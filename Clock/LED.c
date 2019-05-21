@@ -44,7 +44,7 @@ static void TIM4_Config(void)
 
 	/*--------------------- Interrupt Timer 1 konfigurieren ---------------------*/
 	TIM4->DIER = 0x01;	   //enable Interrupt bei einem UEV (Überlauf / Unterlauf)
-	NVIC_init(TIM4_UP_IRQn,2);	   //Enable Timer 1 Update Interrupt, Priority 2
+	NVIC_init(30,2);	   //Enable Timer 1 Update Interrupt, Priority 2
 
 	/*-------------------------- Timer 1 Starten -------------------------------*/
     TIM4->CR1 |= 0x0001;   //Counter-Enable bit setzen
@@ -91,6 +91,7 @@ char buffer[30];
   	{
 		if (lcd_sekunden != sekunden)    // 1 Sekunde vergangen ?
 	 	{ 
+				sekunden++;
 	   		lcd_sekunden = sekunden;
 	   		set_leds(lauflicht);           // Lauflicht auf LED aktualisieren
 	   		lauflicht = lauflicht*2;       // naechtes Lauflicht Bit
