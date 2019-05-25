@@ -13,11 +13,34 @@
 
 /*------------------------------ Function Prototypes -------------------------*/
 static void TIM4_Config(void);
-static void NVIC_init(char position, char priority); 
+static void NVIC_init(char position, char priority);
+static void set_clock_32MHz(void);
 
 /*------------------------------ Static Variables-------------------------*/
 static int sekunden;
 
+static void set_clock_32MHz(void)
+{
+	FLASH->ACR = 0x12;
+	
+	RCC->CR |= RCC_CR_HSEON;
+	while ((RCC->CR & RCC_CR_HSERDY) == 0);
+	
+	RCC->CFGR |= RCC_CFGR_PLLMULL4;
+	RCC->CFGR |= RCC_CFGR_ADCPRE;
+	RCC->CFGR |= RCC_CFGR_PPRE1;
+	RCC->CFGR |= RCC_CFGR_PLLSRC;
+	
+	RCC->CR |= RCC_CR_PLLON;
+	while ((RCC->CR & RCC_CR_PLLRDY) == 0);
+	
+	RCC->CFGR |= RCC_CFGR_SW_PLL;
+	while ((RCC->CFGR & RCC_CFGR_SWS_PLL) == 0);
+	
+	while ((RCC->CFGR & RCC_CFGR_SWS) != ((RCC->CFGR<<2) & RCC_CFGR_SWS));
+	
+	RCC->BDCR |=RCC_BDCR_LSEON;
+}
 /******************************************************************************/
 /*           Interrupt Service Routine  Timer1 (General Purpose Timer)        */
 /******************************************************************************/
@@ -72,9 +95,10 @@ static void NVIC_init(char position, char priority)
 /******************************************************************************/
 int main (void) 
 {
-int lauflicht; 			// Lauflicht P1 Abbild
-int lcd_sekunden; 		// aktueller Zählerstand auf LCD
-char buffer[30];
+	set_clock_32MHz();
+	int lauflicht; 			// Lauflicht P1 Abbild
+	int lcd_sekunden; 		// aktueller Zählerstand auf LCD
+	char buffer[30];
 
 	init_leds_switches();
   	uart_init(9600);    // 9600,8,n,1
