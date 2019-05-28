@@ -13,18 +13,42 @@
 
 /*------------------------------ Function Prototypes -------------------------*/
 static void TIM4_Config(void);
-static void NVIC_init(char position, char priority); 
+static void NVIC_init(char position, char priority);
+static void set_clock_32MHz(void);
+static void Uhr(void);
 
 /*------------------------------ Static Variables-------------------------*/
-static int sekunden;
+volatile int zehntel;
 
+static void set_clock_32MHz(void)
+{
+	FLASH->ACR = 0x12;
+	
+	RCC->CR |= RCC_CR_HSEON;
+	while ((RCC->CR & RCC_CR_HSERDY) == 0);
+	
+	RCC->CFGR |= RCC_CFGR_PLLMULL4;
+	RCC->CFGR |= RCC_CFGR_ADCPRE;
+	RCC->CFGR |= RCC_CFGR_PPRE1;
+	RCC->CFGR |= RCC_CFGR_PLLSRC;
+	
+	RCC->CR |= RCC_CR_PLLON;
+	while ((RCC->CR & RCC_CR_PLLRDY) == 0);
+	
+	RCC->CFGR |= RCC_CFGR_SW_PLL;
+	while ((RCC->CFGR & RCC_CFGR_SWS_PLL) == 0);
+	
+	while ((RCC->CFGR & RCC_CFGR_SWS) != ((RCC->CFGR<<2) & RCC_CFGR_SWS));
+	
+	RCC->BDCR |=RCC_BDCR_LSEON;
+}
 /******************************************************************************/
-/*           Interrupt Service Routine  Timer1 (General Purpose Timer)        */
+/*           Interrupt Service Routine  Timer4 (General Purpose Timer)        */
 /******************************************************************************/
-void TIM4_UP_IRQHandler(void)	//Timer 1, löst alle 1000ms aus
+void TIM4_IRQHandler(void)	//Timer 4, löst alle 1000ms aus
 {
 	TIM4->SR &=~0x01;	 //Interrupt pending bit löschen (Verhinderung eines nochmaligen Interrupt-auslösens)
-	sekunden++;
+	zehntel++;
 }
 
 /******************************************************************************/
@@ -32,21 +56,21 @@ void TIM4_UP_IRQHandler(void)	//Timer 1, löst alle 1000ms aus
 /******************************************************************************/
 static void TIM4_Config(void)
 {	
-	/*---------------------- Timer 1 konfigurieren -----------------------*/
-	RCC->APB1ENR |= 0x0004;	//Timer 1 Clock enable
-	TIM4->SMCR = 0x0000;	//Timer 1 Clock Selection: CK_INT wird verwendet
+	/*---------------------- Timer 4 konfigurieren -----------------------*/
+	RCC->APB1ENR |= 0x0004;	//Timer 4 Clock enable
+	TIM4->SMCR = 0x0000;	//Timer 4 Clock Selection: CK_INT wird verwendet
 	TIM4->CR1  = 0x0000;	// Auswahl des Timer Modus: Upcounter --> Zählt: von 0 bis zum Wert des Autoreload-Registers
 
 	/* T_INT = 126,26ns, Annahme: Presc = 150 ---> Auto Reload Wert = 52801 (=0xCE41) --> 1s Update Event*/
-	TIM4->PSC = 150;		//Wert des prescalers (Taktverminderung)
-	TIM4->ARR = 0xCE41;		//Auto-Reload Wert = Maximaler Zaehlerstand des Upcounters
-	TIM4->RCR = 0;			//Repetition Counter deaktivieren
+	TIM4->PSC = 15;		//Wert des prescalers (Taktverminderung)
+	TIM4->ARR = 0x21;		//Auto-Reload Wert = Maximaler Zaehlerstand des Upcounters
+	//TIM4->RCR = 0;			//Repetition Counter deaktivieren
 
-	/*--------------------- Interrupt Timer 1 konfigurieren ---------------------*/
+	/*--------------------- Interrupt Timer 4 konfigurieren ---------------------*/
 	TIM4->DIER = 0x01;	   //enable Interrupt bei einem UEV (Überlauf / Unterlauf)
-	NVIC_init(TIM4_UP_IRQn,2);	   //Enable Timer 1 Update Interrupt, Priority 2
+	NVIC_init(TIM4_IRQn,1);	   //Enable Timer 4 Update Interrupt, Priority 1
 
-	/*-------------------------- Timer 1 Starten -------------------------------*/
+	/*-------------------------- Timer 4 Starten -------------------------------*/
     TIM4->CR1 |= 0x0001;   //Counter-Enable bit setzen
 
 }
@@ -67,40 +91,56 @@ static void NVIC_init(char position, char priority)
 	NVIC->ISER[position >> 0x05] |= (0x01 << (position & 0x1F));//Interrupt Set Enable Register: Enable interrupt
 } 
 
+static void Uhr(void)
+{
+	int lcd_zehntel; 		// aktueller Zählerstand auf LCD
+	int sekunden;
+	int lcd_sekunden;
+	int minuten;
+	int lcd_minuten;
+	int stunden;
+	int lcd_stunden;
+	char buffer[30];
+	
+	lcd_zehntel=zehntel%10;
+	sekunden=zehntel/10;
+	lcd_sekunden=sekunden%60;
+	minuten=sekunden/60;
+	lcd_minuten=minuten%60;
+	stunden=minuten/60;
+	lcd_stunden=stunden%60;
+	
+	lcd_set_cursor(0,0);                 // Cursor auf Ursprung
+	sprintf(&buffer[0],"%d:%d:%d:%d", lcd_stunden, lcd_minuten, lcd_sekunden, lcd_zehntel); // zehntelzaehler auf LCD aktualisieren
+  lcd_put_string(&buffer[0]);
+	
+	if(lcd_stunden == 23 & lcd_minuten == 59 & lcd_sekunden == 59 /*& lcd_zehntel == 9*/)	//nur als Testzwecke auskommentiert!!!!
+	{
+		zehntel=0;
+	}
+}
+
 /******************************************************************************/
 /*                                MAIN function                               */
 /******************************************************************************/
 int main (void) 
 {
-int lauflicht; 			// Lauflicht P1 Abbild
-int lcd_sekunden; 		// aktueller Zählerstand auf LCD
-char buffer[30];
-
-	init_leds_switches();
-  	uart_init(9600);    // 9600,8,n,1
-  	uart_clear();       // Send Clear String to VT 100 Terminal
-  	lcd_init();         // LCD initialisieren
-	lcd_clear();        // Lösche LCD Anzeige
-  	lauflicht = 0x01;	// Lauflicht im Speicher initilalisieren		
-  	sekunden=0; 		// Sekundenzaehler initialisieren
-  	lcd_sekunden = 0;	// aktueller Anzeigewert
-  	set_leds(0);        // LED löschen
+	int zehntel_pruf=0;
+	
+	set_clock_32MHz();
+  uart_init(9600);    // 9600,8,n,1
+  uart_clear();       // Send Clear String to VT 100 Terminal
+  lcd_init();         // LCD initialisieren
+	lcd_clear();        // Lösche LCD Anzeige		
+  zehntel=0; 		// zehntelzaehler initialisieren
 	TIM4_Config();	    // Timer 1 starten: Upcounter --> löst alle 1s einen Update Interrupt
-	uart_put_string("Lauflicht mit Interrupt:\n");
+	uart_put_string("Inkrementalgeber:\n");
 	do
-  	{
-		if (lcd_sekunden != sekunden)    // 1 Sekunde vergangen ?
-	 	{ 
-	   		lcd_sekunden = sekunden;
-	   		set_leds(lauflicht);           // Lauflicht auf LED aktualisieren
-	   		lauflicht = lauflicht*2;       // naechtes Lauflicht Bit
-	   		if (lauflicht==256)            // letztes Lauflicht Bit ?
-	   		{
-	     		lauflicht = 0x01;          // Anfangszustand Lauflicht
-	   		}  
-	 		lcd_set_cursor(0,0);                 // Cursor auf Ursprung
-			sprintf(&buffer[0],"Sekunden=%d", lcd_sekunden); // Sekundenzaehler auf LCD aktualisieren
-    		lcd_put_string(&buffer[0]);
+  {
+		if (zehntel_pruf != zehntel)    // Hat sich Zählerstand verändert?
+	 	{
+			Uhr();
+			zehntel_pruf=zehntel;	
 		}
   	} while (1);
 
