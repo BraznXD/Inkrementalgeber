@@ -12,13 +12,22 @@
 #include <armv10_std.h>						 
 
 /*------------------------------ Function Prototypes -------------------------*/
-static void TIM4_Config(void);
 static void NVIC_init(char position, char priority);
+static void GPIOA_init(void);
+static void TIM4_Config(void);
+static void EXTI0_Config(void);
+static void EXTI1_Config(void);
 static void set_clock_32MHz(void);
 static void Uhr(void);
+static void position_up(void);
 
 /*------------------------------ Static Variables-------------------------*/
+volatile int links;
+volatile int rechts;
+volatile int ackr;
+volatile int ackl;
 volatile int zehntel;
+volatile int position;
 
 static void set_clock_32MHz(void)
 {
@@ -52,7 +61,45 @@ void TIM4_IRQHandler(void)	//Timer 4, löst alle 1000ms aus
 }
 
 /******************************************************************************/
-/*                     Initialization Timer1 (General Purpose Timer)          */
+/*           External Interrupt Service Routine  Schalter1                    */
+/******************************************************************************/
+void EXTI1_IRQHandler(void)//ISR
+{
+	EXTI->PR |= (0x01 << 1); //Pending bit EXT0 rücksetzen (Sonst wird die ISR immer wiederholt)
+	//aufenthalt++;    // Fallende Flanke an PA1 erkannt
+	if(rechts==1)
+	{
+		ackr=1;
+		return;
+	}
+	else
+	{
+		links=1;
+		return;
+	}
+}
+
+/******************************************************************************/
+/*           External Interrupt Service Routine  Schalter0                    */
+/******************************************************************************/
+void EXTI0_IRQHandler(void)//ISR
+{
+	EXTI->PR |= (0x01 << 1); //Pending bit EXT0 rücksetzen (Sonst wird die ISR immer wiederholt)
+	//aufenthalt--;    // Fallende Flanke an PA0 erkannt
+	if(links==1)
+	{
+		ackl=1;
+		return;
+	}
+	else
+	{
+		rechts=1;
+		return;
+	}
+}
+
+/******************************************************************************/
+/*                     Initialization Timer4 (General Purpose Timer)          */
 /******************************************************************************/
 static void TIM4_Config(void)
 {	
@@ -62,9 +109,9 @@ static void TIM4_Config(void)
 	TIM4->CR1  = 0x0000;	// Auswahl des Timer Modus: Upcounter --> Zählt: von 0 bis zum Wert des Autoreload-Registers
 
 	/* T_INT = 126,26ns, Annahme: Presc = 150 ---> Auto Reload Wert = 52801 (=0xCE41) --> 1s Update Event*/
-	TIM4->PSC = 15;		//Wert des prescalers (Taktverminderung)
-	TIM4->ARR = 0x21;		//Auto-Reload Wert = Maximaler Zaehlerstand des Upcounters
-	//TIM4->RCR = 0;			//Repetition Counter deaktivieren
+	TIM4->PSC = 800;		//Wert des prescalers (Taktverminderung)
+	TIM4->ARR = 0x400;		//Auto-Reload Wert = Maximaler Zaehlerstand des Upcounters
+	TIM4->RCR = 0;			//Repetition Counter deaktivieren
 
 	/*--------------------- Interrupt Timer 4 konfigurieren ---------------------*/
 	TIM4->DIER = 0x01;	   //enable Interrupt bei einem UEV (Überlauf / Unterlauf)
@@ -72,7 +119,42 @@ static void TIM4_Config(void)
 
 	/*-------------------------- Timer 4 Starten -------------------------------*/
     TIM4->CR1 |= 0x0001;   //Counter-Enable bit setzen
+}
 
+/******************************************************************************/
+/*                                   EXTI1_config                             */ 
+/* Leitung PA1 wird mit EXTI1 verbunden, Interupt bei falling edge,Priorität 3*/ 
+/******************************************************************************/
+static void EXTI1_Config()	
+{
+
+	NVIC_init(EXTI1_IRQn,3);		//NVIC fuer initialisieren EXTI Line1 (Position 7, Priority 3) 
+
+  RCC->APB2ENR |= 0x0001;		   //AFIOEN  - Clock enable	
+	AFIO->EXTICR[0] &= 0xFFFFFF0F; //Interrupt-Line EXTI1 mit Portpin PA1 verbinden 
+	EXTI->FTSR |= (0x01 << 1);	   //Falling Edge Trigger für EXIT1 Aktivieren
+  EXTI->RTSR &=~(0x01 << 1);	   //Rising Edge Trigger für EXTI1 Deaktivieren
+
+	EXTI->PR |= (0x01 << 1);	//EXTI_clear_pending: Das Auslösen auf vergangene Vorgänge nach	dem enablen verhindern
+	EXTI->IMR |= (0x01 << 1);   // Enable Interrupt EXTI1-Line. Kann durch den NVIC jedoch noch maskiert werden
+}
+
+/******************************************************************************/
+/*                                   EXTI0_config                             */ 
+/* Leitung PA0 wird mit EXTI0 verbunden, Interupt bei falling edge,Priorität 3*/ 
+/******************************************************************************/
+static void EXTI0_Config()	
+{
+
+	NVIC_init(EXTI0_IRQn,3);		//NVIC fuer initialisieren EXTI Line1 (Position 7, Priority 3) 
+
+  RCC->APB2ENR |= 0x0001;		   //AFIOEN  - Clock enable	
+	AFIO->EXTICR[0] &= 0xFFFFFFF0; //Interrupt-Line EXTI1 mit Portpin PA0 verbinden 
+	EXTI->FTSR |= (0x01 << 0);	   //Falling Edge Trigger für EXIT1 Aktivieren
+  EXTI->RTSR &=~(0x01 << 1);	   //Rising Edge Trigger für EXTI1 Deaktivieren
+
+	EXTI->PR |= (0x01 << 1);	//EXTI_clear_pending: Das Auslösen auf vergangene Vorgänge nach	dem enablen verhindern
+	EXTI->IMR |= (0x01 << 0);   // Enable Interrupt EXTI1-Line. Kann durch den NVIC jedoch noch maskiert werden
 }
 
 /******************************************************************************/
@@ -89,7 +171,16 @@ static void NVIC_init(char position, char priority)
 	NVIC->IP[position]=(priority<<4);	//Interrupt priority register: Setzen der Interrupt Priorität
 	NVIC->ICPR[position >> 0x05] |= (0x01 << (position & 0x1F));//Interrupt Clear Pendig Register: Verhindert, dass der Interrupt auslöst sobald er enabled wird 
 	NVIC->ISER[position >> 0x05] |= (0x01 << (position & 0x1F));//Interrupt Set Enable Register: Enable interrupt
-} 
+}
+
+static void GPIOA_init(void)
+{
+	RCC->APB2ENR |= RCC_APB2ENR_IOPAEN;     	// enable clock for GPIOA (APB2 Peripheral clock enable register)
+	GPIOA->CRL &= 0xFFFFFF00;                  // set Port Pins PA1 to Pull Up/Down Input mode (50MHz) = Mode 8
+	GPIOA->CRL |= 0x00000088;                  
+	GPIOA->ODR |= 0x0002;   					//  Output Register für PA1 auf "1" initialisieren
+	GPIOA->ODR |= 0x0001;
+}
 
 static void Uhr(void)
 {
@@ -120,21 +211,41 @@ static void Uhr(void)
 	}
 }
 
+static void position_up(void)
+{
+	char buffer[10];	
+	lcd_set_cursor(1,10);
+	lcd_put_string("       ");
+	lcd_set_cursor(1,10);
+	sprintf(&buffer[0],"%d", position); // zaehler auf LCD aktualisieren
+  lcd_put_string(&buffer[0]);
+	sprintf(&buffer[0],"Position: %d", position);
+	uart_put_string(&buffer[0]);
+
+	
+}
+
 /******************************************************************************/
 /*                                MAIN function                               */
 /******************************************************************************/
 int main (void) 
 {
 	int zehntel_pruf=0;
+	int position_pruf=0;
 	
 	set_clock_32MHz();
+	GPIOA_init();
   uart_init(9600);    // 9600,8,n,1
   uart_clear();       // Send Clear String to VT 100 Terminal
   lcd_init();         // LCD initialisieren
 	lcd_clear();        // Lösche LCD Anzeige		
   zehntel=0; 		// zehntelzaehler initialisieren
 	TIM4_Config();	    // Timer 1 starten: Upcounter --> löst alle 1s einen Update Interrupt
+	EXTI1_Config();		 // Konfigurieren des Externen Interrupts für Leitung PA1 (Falling Edges)
+	EXTI0_Config();
 	uart_put_string("Inkrementalgeber:\n");
+	lcd_set_cursor(1,0);
+	lcd_put_string("Position: 0");
 	do
   {
 		if (zehntel_pruf != zehntel)    // Hat sich Zählerstand verändert?
@@ -142,6 +253,24 @@ int main (void)
 			Uhr();
 			zehntel_pruf=zehntel;	
 		}
+		if (position_pruf != position)
+		{
+			position_up();
+			position_pruf=position;
+		}
+		if(links==1)
+		{
+			position++;
+		}
+		else if(rechts==1)
+		{
+			position--;
+		}
+		links=0;
+		rechts=0;
+		ackl=0;
+		ackr=0;
+		
   	} while (1);
 
 }
