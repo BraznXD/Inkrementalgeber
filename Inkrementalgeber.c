@@ -20,12 +20,13 @@ static void EXTI1_Config(void);
 static void set_clock_32MHz(void);
 static void Uhr(void);
 static void position_up(void);
+void uart_initialisierung(unsigned long);
 
 /*------------------------------ Static Variables-------------------------*/
-volatile int links;
-volatile int rechts;
-volatile int ackr;
-volatile int ackl;
+volatile int links=0;
+volatile int rechts=0;
+volatile int ackr=0;
+volatile int ackl=0;
 volatile int zehntel;
 volatile int position;
 
@@ -58,6 +59,7 @@ void TIM4_IRQHandler(void)	//Timer 4, löst alle 1000ms aus
 {
 	TIM4->SR &=~0x01;	 //Interrupt pending bit löschen (Verhinderung eines nochmaligen Interrupt-auslösens)
 	zehntel++;
+	
 }
 
 /******************************************************************************/
@@ -84,7 +86,7 @@ void EXTI1_IRQHandler(void)//ISR
 /******************************************************************************/
 void EXTI0_IRQHandler(void)//ISR
 {
-	EXTI->PR |= (0x01 << 1); //Pending bit EXT0 rücksetzen (Sonst wird die ISR immer wiederholt)
+	EXTI->PR |= (0x01 << 0); //Pending bit EXT0 rücksetzen (Sonst wird die ISR immer wiederholt)
 	//aufenthalt--;    // Fallende Flanke an PA0 erkannt
 	if(links==1)
 	{
@@ -109,7 +111,7 @@ static void TIM4_Config(void)
 	TIM4->CR1  = 0x0000;	// Auswahl des Timer Modus: Upcounter --> Zählt: von 0 bis zum Wert des Autoreload-Registers
 
 	/* T_INT = 126,26ns, Annahme: Presc = 150 ---> Auto Reload Wert = 52801 (=0xCE41) --> 1s Update Event*/
-	TIM4->PSC = 800;		//Wert des prescalers (Taktverminderung)
+	TIM4->PSC = 395;		//Wert des prescalers (Taktverminderung)
 	TIM4->ARR = 0x400;		//Auto-Reload Wert = Maximaler Zaehlerstand des Upcounters
 	TIM4->RCR = 0;			//Repetition Counter deaktivieren
 
@@ -151,9 +153,9 @@ static void EXTI0_Config()
   RCC->APB2ENR |= 0x0001;		   //AFIOEN  - Clock enable	
 	AFIO->EXTICR[0] &= 0xFFFFFFF0; //Interrupt-Line EXTI1 mit Portpin PA0 verbinden 
 	EXTI->FTSR |= (0x01 << 0);	   //Falling Edge Trigger für EXIT1 Aktivieren
-  EXTI->RTSR &=~(0x01 << 1);	   //Rising Edge Trigger für EXTI1 Deaktivieren
+  EXTI->RTSR &=~(0x01 << 0);	   //Rising Edge Trigger für EXTI1 Deaktivieren  
 
-	EXTI->PR |= (0x01 << 1);	//EXTI_clear_pending: Das Auslösen auf vergangene Vorgänge nach	dem enablen verhindern
+	EXTI->PR |= (0x01 << 0);	//EXTI_clear_pending: Das Auslösen auf vergangene Vorgänge nach	dem enablen verhindern 
 	EXTI->IMR |= (0x01 << 0);   // Enable Interrupt EXTI1-Line. Kann durch den NVIC jedoch noch maskiert werden
 }
 
@@ -193,6 +195,7 @@ static void Uhr(void)
 	int lcd_stunden;
 	char buffer[30];
 	
+	zehntel--;
 	lcd_zehntel=zehntel%10;
 	sekunden=zehntel/10;
 	lcd_sekunden=sekunden%60;
@@ -202,7 +205,7 @@ static void Uhr(void)
 	lcd_stunden=stunden%60;
 	
 	lcd_set_cursor(0,0);                 // Cursor auf Ursprung
-	sprintf(&buffer[0],"%d:%d:%d:%d", lcd_stunden, lcd_minuten, lcd_sekunden, lcd_zehntel); // zehntelzaehler auf LCD aktualisieren
+	sprintf(&buffer[0],"%02d:%02d:%02d:%d", lcd_stunden, lcd_minuten, lcd_sekunden, lcd_zehntel); // zehntelzaehler auf LCD aktualisieren
   lcd_put_string(&buffer[0]);
 	
 	if(lcd_stunden == 23 & lcd_minuten == 59 & lcd_sekunden == 59 /*& lcd_zehntel == 9*/)	//nur als Testzwecke auskommentiert!!!!
@@ -213,10 +216,11 @@ static void Uhr(void)
 
 static void position_up(void)
 {
-	char buffer[10];	
+	char buffer[30];	
 	lcd_set_cursor(1,10);
 	lcd_put_string("       ");
 	lcd_set_cursor(1,10);
+	
 	sprintf(&buffer[0],"%d", position); // zaehler auf LCD aktualisieren
   lcd_put_string(&buffer[0]);
 	sprintf(&buffer[0],"Position: %d", position);
@@ -224,6 +228,29 @@ static void position_up(void)
 
 	
 }
+/*************************************
+//uart init
+*/
+void uart_initialisierung(unsigned long baudrate)
+{
+  RCC->APB2ENR |= RCC_APB2ENR_IOPAEN; //GPIOA mit einem Takt versorgen
+  
+  GPIOA->CRH &= ~(0x00F0); //loesche PA.9 configuration-bits 
+  GPIOA->CRH   |= (0x0BUL  << 4); //Tx (PA9) - alt. out push-pull
+
+  GPIOA->CRH &= ~(0x0F00); //loesche PA.10 configuration-bits 
+  GPIOA->CRH   |= (0x04UL  << 8); //Rx (PA10) - floating
+  RCC->APB2ENR |= RCC_APB2ENR_USART1EN; //USART1 mit einem Takt versrogen
+
+  USART1->BRR  = 32000000L/baudrate; //Baudrate festlegen statt 8000000 wie normal zu 32000000 ändern
+  
+  USART1->CR1 |= (USART_CR1_RE | USART_CR1_TE);  //aktiviere RX, TX
+  USART1->CR1 |= USART_CR1_UE;                    //aktiviere USART
+
+}
+
+
+
 
 /******************************************************************************/
 /*                                MAIN function                               */
@@ -235,15 +262,16 @@ int main (void)
 	
 	set_clock_32MHz();
 	GPIOA_init();
-  uart_init(9600);    // 9600,8,n,1
-  uart_clear();       // Send Clear String to VT 100 Terminal
+  uart_initialisierung(9600);    // 9600,8,n,1
+	USART1->CR1|=0x0020;	    //USART1 RxNE - Interrupt Enable
+  //uart_clear();       // Send Clear String to VT 100 Terminal
   lcd_init();         // LCD initialisieren
 	lcd_clear();        // Lösche LCD Anzeige		
   zehntel=0; 		// zehntelzaehler initialisieren
 	TIM4_Config();	    // Timer 1 starten: Upcounter --> löst alle 1s einen Update Interrupt
 	EXTI1_Config();		 // Konfigurieren des Externen Interrupts für Leitung PA1 (Falling Edges)
 	EXTI0_Config();
-	uart_put_string("Inkrementalgeber:\n");
+	uart_put_string("Willkommen zum Inkrementalgeber:");
 	lcd_set_cursor(1,0);
 	lcd_put_string("Position: 0");
 	do
@@ -255,21 +283,33 @@ int main (void)
 		}
 		if (position_pruf != position)
 		{
-			position_up();
+		position_up();
+			//uart_put_char(position);
 			position_pruf=position;
 		}
-		if(links==1)
+		if((links==1)&&(ackl==1))
 		{
 			position++;
+			
+			links=0;
+			rechts=0;
+			ackl=0;
+			ackr=0;
+			
 		}
-		else if(rechts==1)
+		else if((rechts==1)&&(ackr==1))
 		{
 			position--;
+			
+			links=0;
+			rechts=0;
+			ackl=0;
+			ackr=0;
 		}
-		links=0;
-		rechts=0;
-		ackl=0;
-		ackr=0;
+	//	links=0;
+	//	rechts=0;
+	//	ackl=0;
+	//	ackr=0;
 		
   	} while (1);
 
