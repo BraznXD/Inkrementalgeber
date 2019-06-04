@@ -349,17 +349,17 @@ Image Symbol Table
     TIM4_Config                              0x0800111d   Thumb Code    82  inkrementalgeber.o(i.TIM4_Config)
     i.TIM4_IRQHandler                        0x08001178   Section        0  inkrementalgeber.o(i.TIM4_IRQHandler)
     i.Uhr                                    0x08001198   Section        0  inkrementalgeber.o(i.Uhr)
-    Uhr                                      0x08001199   Thumb Code   152  inkrementalgeber.o(i.Uhr)
-    i._is_digit                              0x08001248   Section        0  __printf_wp.o(i._is_digit)
-    i.main                                   0x08001258   Section        0  inkrementalgeber.o(i.main)
-    i.position_up                            0x08001370   Section        0  inkrementalgeber.o(i.position_up)
-    position_up                              0x08001371   Thumb Code    66  inkrementalgeber.o(i.position_up)
-    i.set_clock_32MHz                        0x080013d4   Section        0  inkrementalgeber.o(i.set_clock_32MHz)
-    set_clock_32MHz                          0x080013d5   Thumb Code   162  inkrementalgeber.o(i.set_clock_32MHz)
-    i.uart_initialisierung                   0x08001480   Section        0  inkrementalgeber.o(i.uart_initialisierung)
-    .constdata                               0x080014f4   Section      128  armv10_std.o(.constdata)
-    .constdata                               0x08001574   Section       17  __printf_flags_wp.o(.constdata)
-    maptable                                 0x08001574   Data          17  __printf_flags_wp.o(.constdata)
+    Uhr                                      0x08001199   Thumb Code   166  inkrementalgeber.o(i.Uhr)
+    i._is_digit                              0x08001258   Section        0  __printf_wp.o(i._is_digit)
+    i.main                                   0x08001268   Section        0  inkrementalgeber.o(i.main)
+    i.position_up                            0x08001380   Section        0  inkrementalgeber.o(i.position_up)
+    position_up                              0x08001381   Thumb Code    66  inkrementalgeber.o(i.position_up)
+    i.set_clock_32MHz                        0x080013e4   Section        0  inkrementalgeber.o(i.set_clock_32MHz)
+    set_clock_32MHz                          0x080013e5   Thumb Code   162  inkrementalgeber.o(i.set_clock_32MHz)
+    i.uart_initialisierung                   0x08001490   Section        0  inkrementalgeber.o(i.uart_initialisierung)
+    .constdata                               0x08001504   Section      128  armv10_std.o(.constdata)
+    .constdata                               0x08001584   Section       17  __printf_flags_wp.o(.constdata)
+    maptable                                 0x08001584   Data          17  __printf_flags_wp.o(.constdata)
     .data                                    0x20000000   Section       24  inkrementalgeber.o(.data)
     .bss                                     0x20000018   Section       96  libspace.o(.bss)
     HEAP                                     0x20000078   Section      512  asm_startup_stm32f10x_md.o(HEAP)
@@ -566,13 +566,13 @@ Image Symbol Table
     EXTI0_IRQHandler                         0x08000fb5   Thumb Code    36  inkrementalgeber.o(i.EXTI0_IRQHandler)
     EXTI1_IRQHandler                         0x08001051   Thumb Code    36  inkrementalgeber.o(i.EXTI1_IRQHandler)
     TIM4_IRQHandler                          0x08001179   Thumb Code    24  inkrementalgeber.o(i.TIM4_IRQHandler)
-    _is_digit                                0x08001249   Thumb Code    14  __printf_wp.o(i._is_digit)
-    main                                     0x08001259   Thumb Code   204  inkrementalgeber.o(i.main)
-    uart_initialisierung                     0x08001481   Thumb Code   100  inkrementalgeber.o(i.uart_initialisierung)
-    SWAP_DATA                                0x080014f4   Data          64  armv10_std.o(.constdata)
-    UserFont                                 0x08001534   Data          64  armv10_std.o(.constdata)
-    Region$$Table$$Base                      0x08001588   Number         0  anon$$obj.o(Region$$Table)
-    Region$$Table$$Limit                     0x080015a8   Number         0  anon$$obj.o(Region$$Table)
+    _is_digit                                0x08001259   Thumb Code    14  __printf_wp.o(i._is_digit)
+    main                                     0x08001269   Thumb Code   204  inkrementalgeber.o(i.main)
+    uart_initialisierung                     0x08001491   Thumb Code   100  inkrementalgeber.o(i.uart_initialisierung)
+    SWAP_DATA                                0x08001504   Data          64  armv10_std.o(.constdata)
+    UserFont                                 0x08001544   Data          64  armv10_std.o(.constdata)
+    Region$$Table$$Base                      0x08001598   Number         0  anon$$obj.o(Region$$Table)
+    Region$$Table$$Limit                     0x080015b8   Number         0  anon$$obj.o(Region$$Table)
     links                                    0x20000000   Data           4  inkrementalgeber.o(.data)
     rechts                                   0x20000004   Data           4  inkrementalgeber.o(.data)
     ackr                                     0x20000008   Data           4  inkrementalgeber.o(.data)
@@ -590,9 +590,9 @@ Memory Map of the image
 
   Image Entry point : 0x08000191
 
-  Load Region LR_1 (Base: 0x08000000, Size: 0x000015c0, Max: 0xffffffff, ABSOLUTE)
+  Load Region LR_1 (Base: 0x08000000, Size: 0x000015d0, Max: 0xffffffff, ABSOLUTE)
 
-    Execution Region ER_RO (Exec base: 0x08000000, Load base: 0x08000000, Size: 0x000015a8, Max: 0xffffffff, ABSOLUTE)
+    Execution Region ER_RO (Exec base: 0x08000000, Load base: 0x08000000, Size: 0x000015b8, Max: 0xffffffff, ABSOLUTE)
 
     Exec Addr    Load Addr    Size         Type   Attr      Idx    E Section Name        Object
 
@@ -673,27 +673,27 @@ Memory Map of the image
     0x080010cc   0x080010cc   0x00000050   Code   RO            8    i.NVIC_init         inkrementalgeber.o
     0x0800111c   0x0800111c   0x0000005c   Code   RO            9    i.TIM4_Config       inkrementalgeber.o
     0x08001178   0x08001178   0x00000020   Code   RO           10    i.TIM4_IRQHandler   inkrementalgeber.o
-    0x08001198   0x08001198   0x000000b0   Code   RO           11    i.Uhr               inkrementalgeber.o
-    0x08001248   0x08001248   0x0000000e   Code   RO          202    i._is_digit         c_w.l(__printf_wp.o)
-    0x08001256   0x08001256   0x00000002   PAD
-    0x08001258   0x08001258   0x00000118   Code   RO           12    i.main              inkrementalgeber.o
-    0x08001370   0x08001370   0x00000064   Code   RO           13    i.position_up       inkrementalgeber.o
-    0x080013d4   0x080013d4   0x000000ac   Code   RO           14    i.set_clock_32MHz   inkrementalgeber.o
-    0x08001480   0x08001480   0x00000074   Code   RO           15    i.uart_initialisierung  inkrementalgeber.o
-    0x080014f4   0x080014f4   0x00000080   Data   RO          131    .constdata          ARMV10_STD.lib(armv10_std.o)
-    0x08001574   0x08001574   0x00000011   Data   RO          205    .constdata          c_w.l(__printf_flags_wp.o)
-    0x08001585   0x08001585   0x00000003   PAD
-    0x08001588   0x08001588   0x00000020   Data   RO          380    Region$$Table       anon$$obj.o
+    0x08001198   0x08001198   0x000000c0   Code   RO           11    i.Uhr               inkrementalgeber.o
+    0x08001258   0x08001258   0x0000000e   Code   RO          202    i._is_digit         c_w.l(__printf_wp.o)
+    0x08001266   0x08001266   0x00000002   PAD
+    0x08001268   0x08001268   0x00000118   Code   RO           12    i.main              inkrementalgeber.o
+    0x08001380   0x08001380   0x00000064   Code   RO           13    i.position_up       inkrementalgeber.o
+    0x080013e4   0x080013e4   0x000000ac   Code   RO           14    i.set_clock_32MHz   inkrementalgeber.o
+    0x08001490   0x08001490   0x00000074   Code   RO           15    i.uart_initialisierung  inkrementalgeber.o
+    0x08001504   0x08001504   0x00000080   Data   RO          131    .constdata          ARMV10_STD.lib(armv10_std.o)
+    0x08001584   0x08001584   0x00000011   Data   RO          205    .constdata          c_w.l(__printf_flags_wp.o)
+    0x08001595   0x08001595   0x00000003   PAD
+    0x08001598   0x08001598   0x00000020   Data   RO          380    Region$$Table       anon$$obj.o
 
 
-    Execution Region ER_RW (Exec base: 0x20000000, Load base: 0x080015a8, Size: 0x00000018, Max: 0xffffffff, ABSOLUTE)
+    Execution Region ER_RW (Exec base: 0x20000000, Load base: 0x080015b8, Size: 0x00000018, Max: 0xffffffff, ABSOLUTE)
 
     Exec Addr    Load Addr    Size         Type   Attr      Idx    E Section Name        Object
 
-    0x20000000   0x080015a8   0x00000018   Data   RW           16    .data               inkrementalgeber.o
+    0x20000000   0x080015b8   0x00000018   Data   RW           16    .data               inkrementalgeber.o
 
 
-    Execution Region ER_ZI (Exec base: 0x20000018, Load base: 0x080015c0, Size: 0x00000660, Max: 0xffffffff, ABSOLUTE)
+    Execution Region ER_ZI (Exec base: 0x20000018, Load base: 0x080015d0, Size: 0x00000660, Max: 0xffffffff, ABSOLUTE)
 
     Exec Addr    Load Addr    Size         Type   Attr      Idx    E Section Name        Object
 
@@ -710,10 +710,10 @@ Image component sizes
       Code (inc. data)   RO Data    RW Data    ZI Data      Debug   Object Name
 
         56         22        236          0       1536        948   asm_startup_stm32f10x_md.o
-      1432        252          0         24          0       8896   inkrementalgeber.o
+      1448        254          0         24          0       8896   inkrementalgeber.o
 
     ----------------------------------------------------------------------
-      1488        274        268         24       1536       9844   Object Totals
+      1504        276        268         24       1536       9844   Object Totals
          0          0         32          0          0          0   (incl. Generated)
          0          0          0          0          0          0   (incl. Padding)
 
@@ -775,15 +775,15 @@ Image component sizes
 
       Code (inc. data)   RO Data    RW Data    ZI Data      Debug   
 
-      5128        494        416         24       1632      18273   Grand Totals
-      5128        494        416         24       1632      18273   ELF Image Totals
-      5128        494        416         24          0          0   ROM Totals
+      5144        496        416         24       1632      18273   Grand Totals
+      5144        496        416         24       1632      18273   ELF Image Totals
+      5144        496        416         24          0          0   ROM Totals
 
 ==============================================================================
 
-    Total RO  Size (Code + RO Data)                 5544 (   5.41kB)
+    Total RO  Size (Code + RO Data)                 5560 (   5.43kB)
     Total RW  Size (RW Data + ZI Data)              1656 (   1.62kB)
-    Total ROM Size (Code + RO Data + RW Data)       5568 (   5.44kB)
+    Total ROM Size (Code + RO Data + RW Data)       5584 (   5.45kB)
 
 ==============================================================================
 

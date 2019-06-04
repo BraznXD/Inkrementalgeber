@@ -111,8 +111,8 @@ static void TIM4_Config(void)
 	TIM4->CR1  = 0x0000;	// Auswahl des Timer Modus: Upcounter --> Zählt: von 0 bis zum Wert des Autoreload-Registers
 
 	/* T_INT = 126,26ns, Annahme: Presc = 150 ---> Auto Reload Wert = 52801 (=0xCE41) --> 1s Update Event*/
-	TIM4->PSC = 395;		//Wert des prescalers (Taktverminderung)
-	TIM4->ARR = 0x400;		//Auto-Reload Wert = Maximaler Zaehlerstand des Upcounters
+	TIM4->PSC = 0xC8;		//Wert des prescalers (Taktverminderung)
+	TIM4->ARR = 0x7D0;		//Auto-Reload Wert = Maximaler Zaehlerstand des Upcounters
 	TIM4->RCR = 0;			//Repetition Counter deaktivieren
 
 	/*--------------------- Interrupt Timer 4 konfigurieren ---------------------*/
@@ -208,7 +208,7 @@ static void Uhr(void)
 	sprintf(&buffer[0],"%02d:%02d:%02d:%d", lcd_stunden, lcd_minuten, lcd_sekunden, lcd_zehntel); // zehntelzaehler auf LCD aktualisieren
   lcd_put_string(&buffer[0]);
 	
-	if(lcd_stunden == 23 & lcd_minuten == 59 & lcd_sekunden == 59 /*& lcd_zehntel == 9*/)	//nur als Testzwecke auskommentiert!!!!
+	if(lcd_stunden == 23 & lcd_minuten == 59 & lcd_sekunden == 59 & lcd_zehntel == 9)
 	{
 		zehntel=0;
 	}
